@@ -19,6 +19,7 @@ def main():
     iconset_path = obtain_iconset_path(sys.argv[1])
     fulfill_iconset(iconset_path)
     remove_alpha_for_iconset(iconset_path)
+    compress_iconset(iconset_path)
 
 # pragma mark - Paths
     
@@ -172,6 +173,13 @@ def remove_alpha_for_image(path):
     os.popen('sips -s format bmp "' + path + '" --out "' + bmp_path + '"').read()
     os.popen('sips -s format png "' + bmp_path + '" --out "' + path + '"').read()
     print("Removed alpha channel from '" + name + "'")
+
+# pragma mark - Compress
+
+def compress_iconset(path):
+    print('Compressing...')
+    os.popen('/Applications/ImageOptim.app/Contents/MacOS/ImageOptim "' + path + '" >/dev/null 2>&1').read()
+    print('Compressed successfully')
 
 # pragma mark - Logs
 
