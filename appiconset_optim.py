@@ -16,10 +16,13 @@ _icon_name_prefix = ''
 # pragma mark - Main
 
 def main():
-    iconset_path = obtain_iconset_path(sys.argv[1])
-    fulfill_iconset(iconset_path)
-    remove_alpha_for_iconset(iconset_path)
-    compress_iconset(iconset_path)
+    while True:
+        iconset_path = obtain_iconset_path(sys.argv[1])
+        if iconset_path is None: break
+        fulfill_iconset(iconset_path)
+        remove_alpha_for_iconset(iconset_path)
+        compress_iconset(iconset_path)
+        break
     complete()
 
 # pragma mark - Paths
