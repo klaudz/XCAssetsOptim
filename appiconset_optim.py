@@ -18,6 +18,7 @@ _icon_name_prefix = ''
 def main():
     iconset_path = obtain_iconset_path(sys.argv[1])
     fulfill_iconset(iconset_path)
+    remove_alpha_for_iconset(iconset_path)
 
 # pragma mark - Paths
     
@@ -34,7 +35,7 @@ def obtain_iconset_path(path):
         iconset_path = None
     return iconset_path
 
-# pragma mark - Fix
+# pragma mark - Fulfill
 
 def fulfill_iconset(path):
     icon_names = search_icons(path)
@@ -146,6 +147,31 @@ def create_new_icons(src_path, dst_path, icon_names):
         json.dump(icon_json, f, indent=2)
     f.close()
     return 0
+
+# pragma mark - Remove Alpha Channel
+
+def remove_alpha_for_iconset(path):
+    icon_names = search_icons(path)
+    icon_1024_name = icon_names[1024]
+    icon_1024_path = os.path.join(path, icon_1024_name)
+    remove_alpha_for_image(icon_1024_path)
+
+def remove_alpha_for_image(path):
+    name = os.path.basename(path)
+    props = os.popen('sips -1 --getProperty hasAlpha "' + path + '"').read()
+    hasAlphaObj = re.search('hasAlpha: (\w+)', props)
+    if not hasAlphaObj:
+        error("'"+ name + "' is invalid")
+        return 1
+    hasAlpha = hasAlphaObj.group(1) != "no"
+    if not hasAlpha:
+        print("'" + name + "' has no alpha channel")
+        return 0
+    error("'" + name + "' has alpha channel")
+    bmp_path = path + '.bmp'
+    os.popen('sips -s format bmp "' + path + '" --out "' + bmp_path + '"').read()
+    os.popen('sips -s format png "' + bmp_path + '" --out "' + path + '"').read()
+    print("Removed alpha channel from '" + name + "'")
 
 # pragma mark - Logs
 
