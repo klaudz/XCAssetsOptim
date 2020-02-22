@@ -1,15 +1,23 @@
 #!/usr/bin/python3
 
-import sys, os
+import sys, os, shutil
+import time
+import collections
+import re
+import json
 
 # pragma mark - Global Defines
 
 _script_dir = sys.path[0]
+_contents_json_name = 'Contents.json'
+_contents_json_template_path = os.path.join(_script_dir, 'appiconset_Contents.json')
+_icon_name_prefix = ''
 
 # pragma mark - Main
 
 def main():
     iconset_path = obtain_iconset_path(sys.argv[1])
+    fulfill_iconset(iconset_path)
 
 # pragma mark - Paths
     
@@ -25,6 +33,124 @@ def obtain_iconset_path(path):
     else:
         iconset_path = None
     return iconset_path
+
+# pragma mark - Fix
+
+def fulfill_iconset(path):
+    icon_names = search_icons(path)
+    path_tmp = path + '.tmp'
+    path_new = path + '.new'
+    path_bak = path + '.bak'
+    fullsize_icon_names = create_fullsize_icons(path, path_tmp, icon_names)
+    if fullsize_icon_names is None:
+        return 1
+    ret = create_new_icons(path_tmp, path_new, fullsize_icon_names)
+    if ret != 0:
+        return ret
+    shutil.rmtree(path_tmp)
+    shutil.rmtree(path)
+    shutil.move(path_new, path)
+    print('Finished')
+
+def search_icons(path):
+    icon_names = {}
+    files = os.listdir(path)
+    for f in files:
+        file_path = os.path.join(path, f)
+        if not os.path.isfile(file_path):
+            continue
+        ext = os.path.splitext(file_path)[1]
+        if ext.lower() != ".png":
+            continue
+        icon_path = file_path
+        size = parse_size_from_icon(icon_path)
+        icon_name = os.path.basename(icon_path)
+        icon_names[size] = icon_name
+    return icon_names
+
+def parse_size_from_icon(path):
+    name = os.path.basename(path)
+    props = os.popen('sips -1 --getProperty pixelWidth --getProperty pixelHeight "' + path + '"').read()
+    widthObj = re.search('pixelWidth: (\d+)', props)
+    if not widthObj:
+        error("'" + name + "' is invalid")
+        return 1
+    width = int(widthObj.group(1))
+    heightObj = re.search('pixelHeight: (\d+)', props)
+    if not heightObj:
+        error("'" + name + "' is invalid")
+        return 1
+    height = int(heightObj.group(1))
+    if width != height:
+        error("'" + name + "' is invalid, size: (" + str(width) + " x " + str(height) + ")")
+        return 1
+    return width
+
+def create_fullsize_icons(src_path, dst_path, icon_names):
+    if os.path.exists(dst_path):
+        shutil.rmtree(dst_path)
+    os.mkdir(dst_path)
+    last_size = 0
+    size_list = [ 20, 29, 40, 50, 57, 58, 60, 72, 76, 80, 87, 100, 114, 120, 144, 152, 167, 180, 1024 ]
+    size_list.reverse()
+    if not size_list[0] in icon_names:
+        error('Icon (1024) is not found')
+        return None
+    icon_names_new = {}
+    for size in size_list:
+        name_tmp = 'tmp_' + str(size) + '.png'
+        if size in icon_names:
+            name = icon_names[size]
+            src_icon_path = os.path.join(src_path, name)
+            dst_icon_path = os.path.join(dst_path, name_tmp)
+            shutil.copy(src_icon_path, dst_icon_path)
+            print("Copied to '" + name_tmp + "' (" + str(size) + ")")
+        else:
+            src_icon_path = os.path.join(dst_path, icon_names_new[last_size])
+            dst_icon_path = os.path.join(dst_path, name_tmp)
+            os.popen('sips --resampleHeightWidth ' + str(size) + ' ' + str(size) + ' "' + src_icon_path + '" --out "' + dst_icon_path + '"').read()
+            print("Resized to '" + name_tmp + "' (" + str(last_size) + " -> " + str(size) + ")")
+        icon_names_new[size] = name_tmp
+        last_size = size
+    return icon_names_new
+
+def create_new_icons(src_path, dst_path, icon_names):
+    if os.path.exists(dst_path):
+        shutil.rmtree(dst_path)
+    os.mkdir(dst_path)
+    new_contents_json_path = os.path.join(dst_path, _contents_json_name)
+    shutil.copy(_contents_json_template_path, new_contents_json_path)
+    with open(new_contents_json_path, 'r') as f:
+        icon_json = json.load(f)
+    for item in icon_json['images']:
+        idiom = item['idiom']
+        sizeStr = re.match('\d+(\.\d+)?', item['size']).group()
+        scaleStr = re.match('\d+', item['scale']).group()
+        size = float(sizeStr)
+        scale = int(scaleStr)
+        realsize = int(size * scale)
+        if not realsize in icon_names:
+            error('Generated icon (' + sizeStr + '@' + scaleStr + 'x) failed')
+            continue
+        src_name = icon_names[realsize]
+        src_icon_path = os.path.join(src_path, src_name)
+        new_name = _icon_name_prefix + 'icon-' + sizeStr + ('@' + scaleStr + 'x' if scale > 1 else '') + '-' + idiom + os.path.splitext(src_name)[1].lower()
+        print(dst_path)
+        print(new_name)
+        new_icon_path = os.path.join(dst_path, new_name)
+        shutil.copy(src_icon_path, new_icon_path)
+        print("Generated icon '" + new_name + "' successfully")
+        item['filename'] = new_name
+    f.close()
+    with open(new_contents_json_path, 'w') as f:
+        json.dump(icon_json, f, indent=2)
+    f.close()
+    return 0
+
+# pragma mark - Logs
+
+def error(msg):
+    print('[ERROR] ' + msg)
 
 # pragma mark -
 
