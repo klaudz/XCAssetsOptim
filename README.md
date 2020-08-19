@@ -6,7 +6,7 @@ XCAssetsOptim is a set of Python scripts that help optimize asset catalogs (`.xc
 
 `appiconset_optim.py` can optimize app iconset (`.appiconset`) in asset catalogs.
 
-- Fulfill app iconsets with all `size`s of `idiom`s and `scale`s.
+- Fulfill app iconsets with all `size`s of `idiom`s and `scale`s. Even if only one 1024px icon is provided.
 
 - Clean up the naming of app icons.
 
