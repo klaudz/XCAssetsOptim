@@ -8,6 +8,8 @@ XCAssetsOptim is a set of Python scripts that help optimize asset catalogs (`.xc
 
 - Fulfill app iconsets with all `size`s of `idiom`s and `scale`s.
 
+- Clean up the naming of app icons.
+
 - Check and fix Xcode warnings and errors in app iconsets.
 
 - Check and fix issues in application submission, like: 
@@ -24,7 +26,7 @@ Perform the following command with `python3` :
 $ python3 path/to/appiconset_optim.py path/to/appiconset
 ```
 
-Or the following command if you have given an execute permission (`x`) to `appiconset_optim.py` :
+Or the following shorter command if you have given an execute permission (`x`) to `appiconset_optim.py` :
 
 ```bash
 $ path/to/appiconset_optim.py path/to/appiconset
